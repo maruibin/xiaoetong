@@ -46,7 +46,7 @@ python3 xiaoet.py <店铺ID> -tc <ResourceID>
 ```
 python3 xiaoet.py <店铺ID> -tc <ResourceID>
 ```
-#### 6. 根据rid list批量ffmpeg合成视频
+#### 8. 根据rid list批量ffmpeg合成视频
 ```
 python3 xiaoet.py <店铺ID> -tc <ResourceID>
 ```
