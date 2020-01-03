@@ -13,6 +13,7 @@ import sys
 from m3u8.model import SegmentList, Segment, find_key
 from bs4 import BeautifulSoup
 
+
 class Xet(object):
     def __init__(self, appid, re_login=False):
         self.appid = appid
@@ -37,20 +38,23 @@ class Xet(object):
             return subprocess.run(['call', filepath], shell=True)
         else:
             return subprocess.run(['open', filepath])
-            
+
     def login(self, re_login=False):
         session = requests.Session()
-        if not re_login and self.configs.get('last_appid') == self.appid and (time.time() - self.configs.get('cookies_time')) < 14400: # 4小时
+        if not re_login and self.configs.get('last_appid') == self.appid and (
+                time.time() - self.configs.get('cookies_time')) < 14400:  # 4小时
             for key, value in self.configs['cookies'].items():
                 session.cookies[key] = value
         else:
             headers = {
-                'User-Agent': 'Mozilla/5.0 (iPhone; CPU iPhone OS 6_0 like Mac OS X) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/68.0.3440.106 Safari/537.36',
+                'User-Agent': 'Mozilla/5.0 (iPhone; CPU iPhone OS 6_0 like Mac OS X) AppleWebKit/537.36 (KHTML, '
+                              'like Gecko) Chrome/68.0.3440.106 Safari/537.36',
                 'Referer': '',
                 'Origin': 'https://pc-shop.xiaoe-tech.com',
                 'Content-Type': 'application/x-www-form-urlencoded'
             }
-            html = session.get('https://pc-shop.xiaoe-tech.com/{appid}/login'.format(appid=self.appid), headers=headers).text
+            html = session.get('https://pc-shop.xiaoe-tech.com/{appid}/login'.format(appid=self.appid),
+                               headers=headers).text
             soup = BeautifulSoup(html, 'lxml')
             initdata = json.loads(soup.find(name='input', id='initData')['value'])
             with open('qrcode.png', 'wb') as file:
@@ -59,7 +63,9 @@ class Xet(object):
             # Wait for QRcode to be scanned
             islogin = False
             for _ in range(300):
-                res = json.loads(session.post('https://pc-shop.xiaoe-tech.com/{appid}/checkIfUserHasLogin'.format(appid=self.appid), data={'code': initdata['code']}).text)
+                res = json.loads(
+                    session.post('https://pc-shop.xiaoe-tech.com/{appid}/checkIfUserHasLogin'.format(appid=self.appid),
+                                 data={'code': initdata['code']}).text)
                 if not res['code'] and res['data']['code'] == 1:
                     islogin = True
                     break
@@ -67,7 +73,9 @@ class Xet(object):
                     time.sleep(1)
             if islogin:
                 os.remove('qrcode.png')
-                session.get('https://pc-shop.xiaoe-tech.com/{appid}/pcLogin/0?code={code}'.format(appid=self.appid, code=initdata['code']))
+                session.get('https://pc-shop.xiaoe-tech.com/{appid}/pcLogin/0?code={code}'.format(appid=self.appid,
+                                                                                                  code=initdata[
+                                                                                                      'code']))
                 self.configs['last_appid'] = self.appid
                 self.configs['cookies_time'] = time.time()
                 self.configs['cookies'] = requests.utils.dict_from_cookiejar(session.cookies)
@@ -78,6 +86,9 @@ class Xet(object):
         return session
 
     def get_product_list(self):
+        """
+        Returns product list by appid.
+        """
         url = 'https://pc-shop.xiaoe-tech.com/{appid}/open/column.all.get/2.0'.format(appid=self.appid)
         body = {
             'data[page_index]': '0',
@@ -92,13 +103,17 @@ class Xet(object):
             content = ast.literal_eval(res.content.decode("UTF-8"))
             if not content['code']:
                 for product in content['data']:
-                    print('name: {} price: {} productid: {}'.format(product['title'], int(product['price']) / 100, product['id']))
+                    print('name: {} price: {} productid: {}'.format(product['title'], int(product['price']) / 100,
+                                                                    product['id']))
                 return content['data']
             else:
                 print('status: {} msg: {}'.format(content['code'], content['msg']))
         return
 
     def get_resource_list(self, productid):
+        """
+        Returns resource list (by pid).
+        """
         url = 'https://pc-shop.xiaoe-tech.com/{appid}/open/column.resourcelist.get/2.0'.format(appid=self.appid)
         body = {
             'data[page_index]': '0',
@@ -126,21 +141,26 @@ class Xet(object):
             return type
         else:
             print('Invalid id. None suitable type')
-            exit (1)
+            exit(1)
 
     def get_resource(self, resourceid):
+        """
+        Returns resource details (by rid).
+        """
         resourcetype = self.transform_type(resourceid)
         url = 'https://pc-shop.xiaoe-tech.com/{appid}/open/{resourcetype}.detail.get/1.0'.format(appid=self.appid,
-                                                                                  resourcetype=resourcetype)
+                                                                                                 resourcetype=resourcetype)
         body = {
             'data[resource_id]': resourceid
         }
-        self.session.headers.update({'Referer': 'https://pc-shop.xiaoe-tech.com/{appid}/{resourcetype}_details?id={resourceid}'.format(
-            appid=self.appid, resourcetype=resourcetype, resourceid=resourceid)})
+        self.session.headers.update(
+            {'Referer': 'https://pc-shop.xiaoe-tech.com/{appid}/{resourcetype}_details?id={resourceid}'.format(
+                appid=self.appid, resourcetype=resourcetype, resourceid=resourceid)})
         res = self.session.post(url, data=body)
         if res.status_code == 200:
             content = ast.literal_eval(res.content.decode("UTF-8"))
             if not content['code']:
+                # print("resource details: ", json.dumps(content['data'], indent=4))
                 return content['data']
             else:
                 print('status: {} msg: {}'.format(content['code'], content['msg']))
@@ -149,7 +169,7 @@ class Xet(object):
     def get_productid(self, resourceid):
         res = self.get_resource(resourceid)
         if res.get('products'):
-            print (res['products'][0]['product_id'])
+            print(res['products'][0]['product_id'])
         return
 
     def download_video(self, download_dir, resource, nocache=False):
@@ -157,7 +177,8 @@ class Xet(object):
         os.makedirs(resource_dir, exist_ok=True)
 
         url = resource['video_hls'].replace('\\', '')
-        self.session.headers.update({'Referer': 'https://pc-shop.xiaoe-tech.com/{appid}/video_details?id={resourceid}'.format(
+        self.session.headers.update(
+            {'Referer': 'https://pc-shop.xiaoe-tech.com/{appid}/video_details?id={resourceid}'.format(
                 appid=self.appid, resourceid=resource['id'])})
         media = m3u8.loads(self.session.get(url).text)
         url_prefix, segments, changed, complete = url.split('v.f230')[0], SegmentList(), False, True
@@ -194,7 +215,8 @@ class Xet(object):
 
     def download_audio(self, download_dir, resource, nocache=False):
         url = resource['audio_url'].replace('\\', '')
-        audio_file = os.path.join(download_dir, '{title}.{suffix}'.format(title=resource['title'], suffix=os.path.basename(url).split('.')[-1]))
+        audio_file = os.path.join(download_dir, '{title}.{suffix}'.format(title=resource['title'],
+                                                                          suffix=os.path.basename(url).split('.')[-1]))
         if not nocache and os.path.exists(audio_file):
             print('Already Downloaded: {title} {file}'.format(title=resource['title'], file=audio_file))
         else:
@@ -211,14 +233,32 @@ class Xet(object):
         return
 
     def transcode(self, resourceid):
-        resource_dir = os.path.join(self.download_dir, resourceid)
-        if os.path.exists(resource_dir) and os.path.exists(os.path.join(resource_dir, 'metadata')):
-            with open(os.path.join(resource_dir, 'metadata')) as f:
-                metadata = json.load(f)
-            if metadata['complete']:
-                ff = ffmpy.FFmpeg(inputs={os.path.join(resource_dir, 'video.m3u8'): ['-protocol_whitelist', 'crypto,file,http,https,tcp,tls']}, outputs={os.path.join(self.download_dir, metadata['title'] + '.mp4'): None})
-                print(ff.cmd)
-                ff.run()
+        """
+        The original version called os.path.join, constructing paths using '\', which doesnt work in Windows 10.
+        I use '/' here instead.
+        """
+        # resource_dir = os.path.join(self.download_dir, resourceid)
+        # if os.path.exists(resource_dir) and os.path.exists(os.path.join(resource_dir, 'metadata')):
+        #     with open(os.path.join(resource_dir, 'metadata')) as f:
+        #         metadata = json.load(f)
+        #     if metadata['complete']:
+        #         ff = ffmpy.FFmpeg(inputs={os.path.join(resource_dir, 'video.m3u8'): ['-protocol_whitelist',
+        #                                                                              'crypto,file,http,https,tcp,tls']},
+        #                           outputs={os.path.join(self.download_dir, metadata['title'] + '.mp4'): None})
+        #         print(ff.cmd)
+        #         ff.run()
+        # return
+
+        resource_dir = 'download/' + resourceid + '/'
+        with open(resource_dir + 'metadata') as f:
+            metadata = json.load(f)
+        if metadata['complete']:
+            ff = ffmpy.FFmpeg(
+                inputs={resource_dir + 'video.m3u8': ['-protocol_whitelist', 'crypto,file,http,https,tcp,tls']},
+                outputs={'download/' + metadata['title'] + '.mp4': None}
+            )
+            print(ff.cmd)
+            ff.run()
         return
 
     def download(self, id, nocahce=False):
@@ -234,25 +274,60 @@ class Xet(object):
                     self.download_audio(self.download_dir, resource, nocahce)
                 elif self.transform_type(resource['id']) == 'video':
                     self.download_video(self.download_dir, resource, nocahce)
-                    self.transcode(resource['id'])
+                    # Uncomment this line to allow transcode after each video downloaded.
+                    # self.transcode(resource['id'])
             elif resource.get('is_available') == 0:
                 print('Not purchased. name: {} resourceid: {}'.format(resource['title'], resource['id']))
             else:
                 print('Not Found. resourceid: {}'.format(resource['id']))
         return
 
+    def batch_download(self):
+        """
+        Command running argument (example): arguappTC0vgtwC2315 -bd hey
+        """
+        resource_list = [
+            'v_5c80f6ac3e28a_7BumyNgu',
+            'v_5c8124ae65da5_ndnoitiu',
+            'v_5c81ceaa60845_Qf2r34jI'
+        ]
+        for rid in resource_list:
+            self.download(rid)
+        return
+
+    def batch_transcode(self):
+        """
+        Command running argument (example): arguappTC0vgtwC2315 -btc hey
+        """
+        resource_list = [
+            'v_5c80f6ac3e28a_7BumyNgu',
+            'v_5c8124ae65da5_ndnoitiu',
+            'v_5c81ceaa60845_Qf2r34jI'
+        ]
+        for rid in resource_list:
+            try:
+                self.transcode(rid)
+                print("resource", rid, "transcoded.")
+            except:
+                continue
+        return
+
+
 def parse_args():
     parser = argparse.ArgumentParser(description='''Download tools for Xiaoe-tech''')
     parser.add_argument("appid", type=str,
                         help='''Shop ID of xiaoe-tech.''')
     parser.add_argument("-d", type=str, metavar='ID', help='''Download resources by Resource ID or Product ID.''')
+    parser.add_argument("-bd", help='''Batch Download resources by Resource ID list.''')
     parser.add_argument("-rl", type=str, metavar='Product ID', help='''Display All resources of the Product ID''')
     parser.add_argument("-pl", action='store_true', help='''Display All products of the Shop''')
     parser.add_argument("-r2p", type=str, metavar='Resource ID', help='''Get Product ID from Resource ID''')
     parser.add_argument("-tc", type=str, metavar='Resource ID', help='''Combine and transcode the video''')
+    parser.add_argument("-btc", help='''Batch transcode downloaded resources by Resource ID list.''')
     parser.add_argument("--nocache", action='store_true', help='''Download without cache''')
     parser.add_argument("--login", action='store_true', help='''Force to re-login''')
     return parser.parse_args()
+
 
 def main():
     args = parse_args()
@@ -267,6 +342,11 @@ def main():
         xet.get_productid(args.r2p)
     if args.tc:
         xet.transcode(args.tc)
+    if args.bd:
+        xet.batch_download()
+    if args.btc:
+        xet.batch_transcode()
+
 
 if __name__ == '__main__':
     main()
