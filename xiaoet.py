@@ -284,7 +284,7 @@ class Xet(object):
 
     def batch_download(self):
         """
-        Command running argument (example): arguappTC0vgtwC2315 -bd hey
+        Command running argument (example): appTC0vgtwC2315 -bd hey
         """
         resource_list = [
             'v_5c80f6ac3e28a_7BumyNgu',
@@ -297,7 +297,7 @@ class Xet(object):
 
     def batch_transcode(self):
         """
-        Command running argument (example): arguappTC0vgtwC2315 -btc hey
+        Command running argument (example): appTC0vgtwC2315 -btc hey
         """
         resource_list = [
             'v_5c80f6ac3e28a_7BumyNgu',
