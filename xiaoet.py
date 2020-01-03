@@ -257,7 +257,7 @@ class Xet(object):
                 inputs={resource_dir + 'video.m3u8': ['-protocol_whitelist', 'crypto,file,http,https,tcp,tls']},
                 outputs={'download/' + metadata['title'] + '.mp4': None}
             )
-            print(ff.cmd)
+            print(ff.cmd)  # ffmpeg -protocol_whitelist crypto,file,http,https,tcp,tls -i download/v_5c80f6ac3e28a_7BumyNgu/video.m3u8 download/【设计学院】助教结营感想.mp4
             ff.run()
         return
 
